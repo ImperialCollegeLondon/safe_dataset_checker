@@ -837,7 +837,7 @@ class Dataset(object):
         # - switch in short keys and set blank cells to None
         short_ws_keys = ['name', 'title', 'description']
         for old, new in zip(ws_keys, short_ws_keys):
-            data_worksheets[new] = [None if is_blank(dt) else dt for dt in authors[old]]
+            data_worksheets[new] = [None if is_blank(dt) else dt for dt in data_worksheets[old]]
             data_worksheets.pop(old)
 
         # rotate and remove completely blank columns
