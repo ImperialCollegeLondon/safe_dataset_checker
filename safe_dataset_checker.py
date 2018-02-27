@@ -778,10 +778,10 @@ class Dataset(object):
         authors = {k: summary[k] if k in summary else [None] * (len(ncols) - 1)
                    for k in author_keys}
 
-        # - switch in zenodo keys
+        # - switch in zenodo keys and set blank cells to None
         zenodo_keys = ['name', 'affiliation', 'email', 'orcid']
         for old, new in zip(author_keys, zenodo_keys):
-            authors[new] = authors[old]
+            authors[new] = [None if is_blank(dt) else dt for dt in authors[old]]
             authors.pop(old)
 
         # rotate and remove completely blank columns
@@ -834,10 +834,10 @@ class Dataset(object):
         data_worksheets = {k: summary[k] if k in summary else [None] * (len(ncols) - 1)
                            for k in ws_keys}
 
-        # - switch in short keys
+        # - switch in short keys and set blank cells to None
         short_ws_keys = ['name', 'title', 'description']
         for old, new in zip(ws_keys, short_ws_keys):
-            data_worksheets[new] = data_worksheets[old]
+            data_worksheets[new] = [None if is_blank(dt) else dt for dt in authors[old]]
             data_worksheets.pop(old)
 
         # rotate and remove completely blank columns
@@ -1635,7 +1635,7 @@ class Dataset(object):
         if meta['field_type'] != 'Comments':
 
             # Only NA is acceptable
-            na_vals = [vl == u'NA' for vl in data]
+            na_vals = [dt.value == u'NA' for dt in data]
             if any(na_vals):
                 LOGGER.warn('{} / {} values missing'.format(sum(na_vals), len(na_vals)))
 
@@ -1887,12 +1887,12 @@ class Dataset(object):
 
         # For date and time options, check decimal components
         if which == 'date':
-            contains_time= [dt % 1 > 0 for dt in data]
+            contains_time = [dt % 1 > 0 for dt in data]
             if any(contains_time):
                 LOGGER.error('Some values also contain time components')
 
         if which == 'time':
-            contains_date= [1 <= dt for dt in data]
+            contains_date = [1 <= dt for dt in data]
             if any(contains_date):
                 LOGGER.error('Some values also contain date components')
 
@@ -1911,7 +1911,6 @@ class Dataset(object):
             # reduce extents to time
             extent = (vl.time() for vl in extent)
             meta['range'] = extent
-
 
     def check_field_taxa(self, data):
 
@@ -1943,8 +1942,9 @@ class Dataset(object):
             data: A list of data values, allegedly taxon names
         """
 
-        # location names should be strings
-        data = [unicode(dt.value) for dt in data]
+        # location names should be strings but we allow integer point numbers
+        data = [unicode(int(dt.value)) if dt.ctype == xlrd.XL_CELL_NUMBER
+                else unicode(dt.value) for dt in data]
 
         # check if locations are all provided
         found = set(data)
@@ -1952,7 +1952,7 @@ class Dataset(object):
             LOGGER.error('No locations loaded')
         elif not found.issubset(self.locations):
             LOGGER.error('Includes locations missing from Locations worksheet:',
-                         extra={'join': found - self.taxon_names, 'quote': True})
+                         extra={'join': found - self.locations, 'quote': True})
 
         # add the locations to the set of locations used
         self.locations_used.update(found)
@@ -2112,7 +2112,7 @@ class Dataset(object):
         if len(nums) < len(data):
             LOGGER.error('Field contains non-numeric data')
             LOGGER.error('Non numeric data found')
-            if any([RE_DMS.search(unicode(dt.value)) for dt in data]):
+            if any([RE_DMS.search(unicode(dt)) for dt in data]):
                 LOGGER.warn('Possible degrees minutes and seconds formatting? Use decimal degrees')
 
         # Check the locations
