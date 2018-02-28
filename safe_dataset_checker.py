@@ -35,8 +35,6 @@ import numbers
 import logging
 import sqlite3
 import xlrd
-# import openpyxl
-# from openpyxl import utils
 import requests
 import simplejson
 

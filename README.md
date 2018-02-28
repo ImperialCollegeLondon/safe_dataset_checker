@@ -64,7 +64,7 @@ Python Standard Library - a set of code packages that are installed
 with Python - but does use three extra packages that can be installed
 using the `pip` package installer. At the command line, type:
 
-        pip install openpyxl requests simplejson
+        pip install xlrd requests simplejson
 
   Those packages allow Python to: read Excel files, get validation data
 over the internet and handle JSON formatted data.
