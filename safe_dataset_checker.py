@@ -1879,6 +1879,7 @@ class Dataset(object):
         # Check type (excluding NA values)
         bad = [dt.value for dt in data if dt.ctype != xlrd.XL_CELL_DATE]
         if len(bad):
+            bad = set(unicode(vl) for vl in bad)
             LOGGER.error('Data in field not formatted as date. Note that text can look'
                          '_exactly_ like a date: ', extra={'join': bad})
 
@@ -1897,20 +1898,24 @@ class Dataset(object):
                 LOGGER.error('Some values also contain date components')
 
         # get the extent as datetimes
-        extent = (xlrd.xldate_as_datetime(min(data), self.workbook.datemode),
-                  xlrd.xldate_as_datetime(max(data), self.workbook.datemode))
+        if len(data):
+            extent = (xlrd.xldate_as_datetime(min(data), self.workbook.datemode),
+                      xlrd.xldate_as_datetime(max(data), self.workbook.datemode))
+        else:
+            extent = None
 
         if which in ['date', 'datetime']:
             # Check date and datetime contain actual dates and update extent
             if any(0.0 <= dt < 1.0 for dt in data):
                 LOGGER.warn('Some values _only_  contain time components')
-
-            meta['range'] = extent
-            self.update_extent(extent, datetime.datetime, 'temporal_extent')
+            if extent is not None:
+                meta['range'] = extent
+                self.update_extent(extent, datetime.datetime, 'temporal_extent')
         elif which == 'time':
             # reduce extents to time
-            extent = (vl.time() for vl in extent)
-            meta['range'] = extent
+            if extent is not None:
+                extent = (vl.time() for vl in extent)
+                meta['range'] = extent
 
     def check_field_taxa(self, data):
 
