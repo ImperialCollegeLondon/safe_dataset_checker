@@ -199,9 +199,9 @@ def duplication(data):
     return [ky for ky, vl in Counter(data).iteritems() if vl > 1]
 
 
-def is_integer_string(txt):
+def is_numeric_string(txt):
     """
-    Checks if a string value can represent an integer.
+    Checks if a string value can represent an float.
     Args:
         txt: A string
 
@@ -209,7 +209,7 @@ def is_integer_string(txt):
         A boolean.
     """
     try:
-        int(txt)
+        float(txt)
         return True
     except ValueError:
         return False
@@ -2014,20 +2014,30 @@ class Dataset(object):
             if len(set(level_labels)) < len(level_labels):
                 LOGGER.error('Repeated level labels')
 
-            # - check for integer level names
-            integer_codes = [is_integer_string(vl) for vl in level_labels]
+            # - check for numeric level names: integers would be more common
+            #   but don't let floats sneak through either!
+            integer_codes = [is_numeric_string(vl) for vl in level_labels]
             if any(integer_codes):
-                LOGGER.error('Integer level names not permitted')
+                LOGGER.error('Numeric level names not permitted')
 
             # Now look for consistency: get the unique values reported in the
-            # data, convert to unicode to handle checking of integer labels and
+            # data, convert to unicode to handle checking of numeric labels and
             # then check the reported levels are a subset of the descriptors.
+            # XLRD reads all numbers as floats, so coerce floats back to int
             reported = set(data)
-            reported = {unicode(lv.value) for lv in reported}
+            reported = {lv.value for lv in reported}
+            found = set()
+            for lv in reported:
+                if isinstance(lv, float) and lv.is_integer() and unicode(int(lv)) in level_labels:
+                    found.add(lv)
+                elif isinstance(lv, float) and unicode(lv) in level_labels:
+                    found.add(lv)
+                elif unicode(lv) in level_labels:
+                    found.add(lv)
 
-            if not reported.issubset(level_labels):
+            if found != reported:
                 LOGGER.error('Categories found in data missing from description: ',
-                             extra={'join': reported - set(level_labels), 'quote': True})
+                             extra={'join': reported - found, 'quote': True})
 
     def check_field_numeric(self, meta, data):
 
